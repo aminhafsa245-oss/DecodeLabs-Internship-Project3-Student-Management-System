@@ -82,20 +82,13 @@ Student Management System
 
 ### 🏠 Home Page
 
-![Home Page](screenshots/home-page.png)
+![Home Page](Screenshots/Home-Page.png)
 
-### ➕ Add Student
+![Add Student](Screenshots/Add-Student.png)
 
-![Add Student](screenshots/add-student.png)
+![Update Student](Screenshots/Update-Student.png)
 
-### ✏️ Update Student
-
-![Update Student](screenshots/update-student.png)
-
-### 📭 Empty State
-
-![Empty State](screenshots/empty-state.png)
-
+![Empty State](Screenshots/Empty-State.png)
 ---
 
 ## 🚀 Installation & Setup
