@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
 const app = express();
@@ -8,131 +9,201 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-let students = [
-    {
-        id: 1,
-        name: "Ali",
-        course: "Web Development"
-    },
-    {
-        id: 2,
-        name: "Sara",
-        course: "Graphic Designing"
-    }
-];
+// ==========================
+// Database Connection
+// ==========================
 
-// ===================
+const db = new sqlite3.Database(
+    path.join(__dirname, "database.db"),
+    (err) => {
+
+        if (err) {
+            console.log("Database Connection Error:", err.message);
+        } else {
+            console.log("Connected to SQLite Database.");
+        }
+
+    }
+);
+
+// ==========================
+// Create Table
+// ==========================
+
+db.run(`
+CREATE TABLE IF NOT EXISTS students(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    course TEXT NOT NULL
+)
+`);
+
+// ==========================
 // GET ALL STUDENTS
-// ===================
+// ==========================
 
 app.get("/students", (req, res) => {
-    res.json(students);
+
+    db.all("SELECT * FROM students", [], (err, rows) => {
+
+        if (err) {
+
+            return res.status(500).json({
+                message: err.message
+            });
+
+        }
+
+        res.json(rows);
+
+    });
+
 });
 
-// ===================
+// ==========================
 // ADD STUDENT
-// ===================
-
 app.post("/students", (req, res) => {
 
     const { name, course } = req.body;
 
     if (!name || !course) {
-
         return res.status(400).json({
             message: "Please fill all fields."
         });
-
     }
 
-    const newStudent = {
+    const checkQuery = `
+        SELECT * FROM students
+        WHERE LOWER(name) = LOWER(?)
+        AND LOWER(course) = LOWER(?)
+    `;
 
-        id: Date.now(),
+    db.get(checkQuery, [name, course], (err, row) => {
 
-        name,
+        if (err) {
+            return res.status(500).json({
+                message: "Database Error",
+                error: err.message
+            });
+        }
 
-        course
+        if (row) {
+            return res.status(409).json({
+                message: "Student already exists."
+            });
+        }
 
-    };
+        const insertQuery = `
+            INSERT INTO students (name, course)
+            VALUES (?, ?)
+        `;
 
-    students.push(newStudent);
+        db.run(insertQuery, [name, course], function (err) {
 
-    res.status(201).json({
+            if (err) {
+                return res.status(500).json({
+                    message: "Database Error",
+                    error: err.message
+                });
+            }
 
-        message: "Student Added Successfully",
+            res.status(201).json({
+                message: "Student Added Successfully",
+                student: {
+                    id: this.lastID,
+                    name,
+                    course
+                }
+            });
 
-        student: newStudent
+        });
 
     });
 
 });
 
-// ===================
+// ==========================
 // UPDATE STUDENT
-// ===================
+// ==========================
 
 app.put("/students/:id", (req, res) => {
 
-    const id = Number(req.params.id);
-
+    const id = req.params.id;
     const { name, course } = req.body;
 
-    const student = students.find(s => s.id === id);
-
-    if (!student) {
-
-        return res.status(404).json({
-
-            message: "Student not found."
-
+    if (!name || !course) {
+        return res.status(400).json({
+            message: "Please fill all fields."
         });
-
     }
 
-    student.name = name;
-    student.course = course;
+    const query = `
+        UPDATE students
+        SET name = ?, course = ?
+        WHERE id = ?
+    `;
 
-    res.json({
+    db.run(query, [name, course, id], function (err) {
 
-        message: "Student Updated Successfully",
+        if (err) {
+            return res.status(500).json({
+                message: "Database Error",
+                error: err.message
+            });
+        }
 
-        student
+        if (this.changes === 0) {
+            return res.status(404).json({
+                message: "Student not found."
+            });
+        }
+
+        res.json({
+            message: "Student Updated Successfully"
+        });
 
     });
 
 });
 
-// ===================
+
+// ==========================
 // DELETE STUDENT
-// ===================
+// ==========================
 
-app.delete("/students/:id", (req, res) => {
 
-    const id = Number(req.params.id);
+          app.delete("/students/:id", (req, res) => {
 
-    const index = students.findIndex(s => s.id === id);
 
-    if (index === -1) {
+    db.get(
+        "SELECT * FROM students WHERE id = ?",
+        [req.params.id],
+        (err, row) => {
 
-        return res.status(404).json({
+            if (!row) {
+                return res.status(404).json({
+                    message: "Student not found."
+                });
+            }
 
-            message: "Student not found."
+            db.run(
+                "DELETE FROM students WHERE id = ?",
+                [req.params.id],
+                function (err) {
 
-        });
+                    res.json({
+                        message: "Student Deleted Successfully"
+                    });
 
-    }
+                }
+            );
 
-    students.splice(index, 1);
-
-    res.json({
-
-        message: "Student Deleted Successfully"
-
-    });
+        }
+    );
 
 });
 
-// ===================
+// ==========================
 
 const PORT = 5000;
 

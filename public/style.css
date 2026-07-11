@@ -298,3 +298,35 @@ h1{
     }
 
 }
+
+.empty-message {
+    list-style: none;
+    text-align: center;
+    padding: 20px;
+    color: #777;
+    font-size: 18px;
+    font-style: italic;
+}
+
+#message {
+    margin: 15px 0;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: bold;
+    display: none;
+}
+
+#message.success {
+    display: block;
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#message.error {
+    display: block;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}

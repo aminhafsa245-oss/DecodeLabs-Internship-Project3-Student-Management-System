@@ -12,7 +12,6 @@ async function loadStudents() {
     try {
 
         const response = await fetch(apiURL);
-
         students = await response.json();
 
         displayStudents(students);
@@ -21,7 +20,7 @@ async function loadStudents() {
 
         showMessage("Unable to load students.", "error");
         console.error(error);
-
+ 
     }
 
 }
@@ -33,45 +32,44 @@ async function loadStudents() {
 function displayStudents(studentArray) {
 
     const studentList = document.getElementById("students");
-
     const totalStudents = document.getElementById("totalStudents");
 
     studentList.innerHTML = "";
-
     totalStudents.textContent = studentArray.length;
+
+    if (studentArray.length === 0) {
+
+    studentList.innerHTML = `
+        <li class="empty-message">
+            No students found.
+        </li>
+    `;
+
+    return;
+
+}
 
     studentArray.forEach(student => {
 
         const li = document.createElement("li");
 
         li.innerHTML = `
-
             <div class="student-info">
-
                 <h3>${student.name}</h3>
-
                 <p>${student.course}</p>
-
             </div>
 
             <div class="buttons">
-
                 <button class="edit-btn"
                     onclick="editStudent(${student.id})">
-
                     Edit
-
                 </button>
 
                 <button class="delete-btn"
                     onclick="deleteStudent(${student.id})">
-
                     Delete
-
                 </button>
-
             </div>
-
         `;
 
         studentList.appendChild(li);
@@ -87,84 +85,94 @@ function displayStudents(studentArray) {
 async function saveStudent() {
 
     const name = document.getElementById("name").value.trim();
+const course = document.getElementById("course").value.trim();
 
-    const course = document.getElementById("course").value.trim();
+// Check Empty Fields
+if (name === "" || course === "") {
 
-    if (!name || !course) {
+    showMessage("Please fill all fields.", "error");
+    return;
 
-        showMessage("Please fill all fields.", "error");
+}
 
-        return;
+// Name Validation
+if (name.length < 3) {
 
-    }
+    showMessage("Student name must contain at least 3 characters.", "error");
+    return;
+
+}
+
+// Course Validation
+if (course.length < 3) {
+
+    showMessage("Course name must contain at least 3 characters.", "error");
+    return;
+
+}
 
     const studentData = {
-
         name,
-
         course
-
     };
 
     try {
 
+        let response;
+
         if (editStudentId === null) {
 
-            const response = await fetch(apiURL, {
+            response = await fetch(apiURL, {
 
                 method: "POST",
 
                 headers: {
-
                     "Content-Type": "application/json"
-
                 },
 
                 body: JSON.stringify(studentData)
 
             });
 
-            const result = await response.json();
-
-            showMessage(result.message, "success");
-
         } else {
 
-            const response = await fetch(`${apiURL}/${editStudentId}`, {
+            response = await fetch(`${apiURL}/${editStudentId}`, {
 
                 method: "PUT",
 
                 headers: {
-
                     "Content-Type": "application/json"
-
                 },
 
                 body: JSON.stringify(studentData)
 
             });
 
-            const result = await response.json();
-
-            showMessage(result.message, "success");
-
             editStudentId = null;
-
             document.getElementById("submitBtn").textContent = "Add Student";
 
         }
 
-        document.getElementById("name").value = "";
+        const result = await response.json();
+        if (response.ok) {
 
+    showMessage(result.message, "success");
+
+} else {
+
+    showMessage(result.message, "error");
+
+}
+
+        document.getElementById("name").value = "";
         document.getElementById("course").value = "";
 
         loadStudents();
 
     } catch (error) {
 
-        showMessage("Something went wrong.", "error");
-
         console.error(error);
+        showMessage("Something went wrong.", "error");
 
     }
 
@@ -181,7 +189,6 @@ function editStudent(id) {
     if (!student) return;
 
     document.getElementById("name").value = student.name;
-
     document.getElementById("course").value = student.course;
 
     editStudentId = id;
@@ -203,24 +210,23 @@ async function deleteStudent(id) {
     try {
 
         const response = await fetch(`${apiURL}/${id}`, {
-            method: "DELETE"
-        });
 
-        console.log("Status:", response.status);
+            method: "DELETE"
+
+        });
 
         const result = await response.json();
 
-        console.log(result);
+        showMessage(result.message, response.ok ? "success" : "error");
 
-        showMessage(result.message, "success");
-
-        loadStudents();
+        if (response.ok) {
+            loadStudents();
+        }
 
     } catch (error) {
 
-        console.error("DELETE ERROR:", error);
-
-        alert(error);
+        console.error(error);
+        showMessage("Unable to delete student.", "error");
 
     }
 
@@ -232,16 +238,16 @@ async function deleteStudent(id) {
 
 function searchStudent() {
 
-    const search = document
+    const keyword = document
         .getElementById("search")
         .value
         .toLowerCase();
 
     const filtered = students.filter(student =>
 
-        student.name.toLowerCase().includes(search) ||
+        student.name.toLowerCase().includes(keyword) ||
 
-        student.course.toLowerCase().includes(search)
+        student.course.toLowerCase().includes(keyword)
 
     );
 
@@ -250,7 +256,7 @@ function searchStudent() {
 }
 
 // =======================
-// Success / Error Message
+// Message Box
 // =======================
 
 function showMessage(message, type) {
@@ -258,13 +264,11 @@ function showMessage(message, type) {
     const messageBox = document.getElementById("message");
 
     messageBox.textContent = message;
-
     messageBox.className = type;
 
     setTimeout(() => {
 
         messageBox.textContent = "";
-
         messageBox.className = "";
 
     }, 2500);
